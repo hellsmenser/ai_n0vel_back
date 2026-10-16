@@ -1,0 +1,23 @@
+# Исключаем артефакты и временные файлы
+__pycache__/
+*.pyc
+*.pyo
+*.dist-info/
+
+# Логи
+logs/
+*.log
+
+# VCS и виртуальные окружения
+.git/
+.gitignore
+.venv/
+.env
+
+# IDE
+.vscode/
+*.code-workspace
+
+# Прочее
+.DS_Store
+
