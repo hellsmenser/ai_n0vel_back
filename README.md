@@ -2,6 +2,8 @@
 
 Минималистичное Python-приложение, отслеживающее изменения задач в MongoDB и генерирующее JSON-сцены строгого контракта v1. Это демонстрационный генератор, а не интеграция с LLM.
 
+Связанный Ren'Py-клиент: [hellsmenser/ai_n0vel](https://github.com/hellsmenser/ai_n0vel).
+
 ## Структура
 - `main.py` — точка входа.
 - `core/scene_generator.py` — demo-генератор v1; принимает task id как `scene_id` и использует только ресурсы текущего Ren'Py-клиента.
@@ -11,6 +13,8 @@
 - `config/env.py` — загрузка переменных окружения (`python-dotenv`).
 - `logs/` — ротационные логи (создаются при запуске).
 - `Novel/game/scenes/` — целевые JSON-файлы сцен (создаётся автоматически).
+- `docker-compose.yml` — локальная MongoDB replica set и оркестратор.
+- `PROJECT_STATUS.md` и `docs/` — общий статус и журнал архитектурных решений.
 
 ## Переменные окружения
 Приложению нужны:
@@ -18,6 +22,37 @@
 - `MONGO_DB_NAME` — имя базы данных (опционально, по умолчанию `default_db`).
 
 Перед запуском контейнера задайте как минимум `MONGO_URI`.
+
+## Полный локальный запуск
+
+Расположите client и backend рядом:
+
+```text
+workspace/
+├── ai_n0vel/
+└── ai_n0vel_back/
+```
+
+Из каталога `ai_n0vel_back`:
+
+```powershell
+Copy-Item .env.example .env
+docker compose up --build
+```
+
+Compose поднимает MongoDB 7 с replica set, инициализирует его и запускает оркестратор. Каталог клиента монтируется по `NOVEL_CLIENT_PATH`; по умолчанию это `../ai_n0vel`. MongoDB публикует порт `27017` для локального Ren'Py-клиента и не предназначена для недоверенной сети.
+
+Проверка конфигурации без запуска контейнеров:
+
+```powershell
+docker compose config --quiet
+```
+
+Остановка с сохранением именованного volume базы:
+
+```powershell
+docker compose down
+```
 
 ## Локальный запуск (без контейнера)
 ```cmd
