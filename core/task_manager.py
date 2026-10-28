@@ -28,7 +28,15 @@ async def handle_ready_to_generate(collection, task):
     collection.update_one({"_id": ObjectId(task_id)}, {"$set": {"status": "generating"}})
     log.info(f"{task_id}: ready_to_generate -> generating")
 
-    scene_json = generate_scene(str(task_id))
+    payload = task.get("payload")
+    # Canonical producers write generation inputs under payload. The top-level
+    # key remains a transition fallback, but never overrides payload.ui.
+    if isinstance(payload, dict) and "ui" in payload:
+        scene_json = generate_scene(str(task_id), ui=payload["ui"])
+    elif "ui" in task:
+        scene_json = generate_scene(str(task_id), ui=task["ui"])
+    else:
+        scene_json = generate_scene(str(task_id))
     collection.update_one(
         {"_id": ObjectId(task_id)},
         {"$set": {"status": "generated", "result": scene_json}},

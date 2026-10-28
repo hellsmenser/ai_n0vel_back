@@ -2,6 +2,7 @@
 
 import json
 import random
+from copy import deepcopy
 
 
 BACKGROUND_IMAGES = ("bg_forest", "bg_tavern_interior")
@@ -9,9 +10,10 @@ CHARACTERS = {
     "lira": "Лира",
     "kael": "Каэль",
 }
+_UI_UNSET = object()
 
 
-def generate_scene(scene_id="scene_debug_03"):
+def generate_scene(scene_id="scene_debug_03", ui=_UI_UNSET):
     """Return a demo scene accepted by the Ren'Py JSON contract v1.
 
     This generator intentionally emits only assets and actions that the client
@@ -26,12 +28,12 @@ def generate_scene(scene_id="scene_debug_03"):
         {
             "type": "show",
             "target": "lira neutral",
-            "transform": {"xalign": 0.2, "yalign": 0.0},
+            "transform": {"slot": "left", "yalign": 0.0},
         },
         {
             "type": "show",
             "target": "kael serious",
-            "transform": {"xalign": 0.8, "yalign": 0.0},
+            "transform": {"slot": "right", "yalign": 0.0, "flip": True},
         },
     ]
 
@@ -68,7 +70,7 @@ def generate_scene(scene_id="scene_debug_03"):
         ]
     )
 
-    return {
+    scene = {
         "schema_version": 1,
         "scene_id": str(scene_id),
         "name": "Разговор в лесу",
@@ -76,6 +78,9 @@ def generate_scene(scene_id="scene_debug_03"):
         "characters": dict(CHARACTERS),
         "dialogue": dialogue,
     }
+    if ui is not _UI_UNSET:
+        scene["ui"] = deepcopy(ui)
+    return scene
 
 
 if __name__ == "__main__":

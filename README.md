@@ -16,6 +16,8 @@
 - `docker-compose.yml` — локальная MongoDB replica set и оркестратор.
 - `PROJECT_STATUS.md` и `docs/` — общий статус и журнал архитектурных решений.
 
+Контракт допускает необязательный объект `ui` с `theme_id`, `palette_id` и `font_pack_id`. Канонический источник рекомендаций — `task.payload.ui`; временно поддерживается fallback из `task.ui`. Отсутствие `ui` сохраняет legacy/default поведение, а неизвестный корректный ID принимает контракт и безопасно обрабатывает fallback клиента.
+
 ## Переменные окружения
 Приложению нужны:
 - `MONGO_URI` — строка подключения к MongoDB (например: `mongodb://user:pass@host:27017/?authSource=admin`).
@@ -117,6 +119,8 @@ docker run --rm orchestrator:latest python -m core.scene_generator > scene_sampl
 python -m py_compile core\scene_generator.py core\scene_contract.py core\task_manager.py
 python -m unittest discover -v
 ```
+
+Текущий suite: `30/30`; в него входят parity-проверки optional UI contract, wiring `payload.ui` и симметричный контракт фиксированных слотов персонажей.
 
 Невалидный/отсутствующий результат и ошибка записи переводят задачу в `error` со структурированным кодом. Статус `done` устанавливается только после проверки контракта, атомарной записи, повторного чтения и проверки `scene_id == task_id`. Действие `music` намеренно не генерируется до появления handler и аудиоресурсов в клиенте.
 

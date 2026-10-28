@@ -70,6 +70,12 @@ class SceneGeneratorContractTests(unittest.TestCase):
             if action["type"] == "jump":
                 self.assertIsInstance(action["target"], str)
 
+        self.assertEqual(dialogue[1]["transform"], {"slot": "left", "yalign": 0.0})
+        self.assertEqual(
+            dialogue[2]["transform"],
+            {"slot": "right", "yalign": 0.0, "flip": True},
+        )
+
 
 class SceneContractParityTests(unittest.TestCase):
     def test_schema_version_requires_integer_not_float_or_boolean(self):
@@ -120,6 +126,33 @@ class SceneContractParityTests(unittest.TestCase):
         show["transform"]["alpha"] = float("inf")
         with self.assertRaises(SceneContractError):
             validate_scene_v1(scene)
+
+    def test_transform_slot_parity_and_xalign_exclusivity(self):
+        for slot in ("far_left", "left", "center", "right", "far_right"):
+            scene = generate_scene("slot-" + slot)
+            scene["dialogue"][1]["transform"] = {"slot": slot, "flip": True}
+            validate_scene_v1(scene)
+
+        legacy = generate_scene("legacy-transform")
+        legacy["dialogue"][1]["transform"] = {
+            "xalign": 0.37,
+            "yalign": 0.8,
+            "alpha": 0.6,
+            "flip": False,
+        }
+        legacy["dialogue"][2]["transform"] = {}
+        validate_scene_v1(legacy)
+
+        conflict = deepcopy(legacy)
+        conflict["dialogue"][1]["transform"]["slot"] = "left"
+        with self.assertRaises(SceneContractError):
+            validate_scene_v1(conflict)
+
+        for invalid_slot in ("middle", []):
+            invalid = deepcopy(legacy)
+            invalid["dialogue"][1]["transform"] = {"slot": invalid_slot}
+            with self.assertRaises(SceneContractError):
+                validate_scene_v1(invalid)
 
     def test_animate_boundaries_match_client_contract(self):
         scene = generate_scene("animate-boundary")

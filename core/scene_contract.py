@@ -2,17 +2,21 @@
 
 import json
 import math
+import re
 
 BACKGROUND_IMAGES = {"bg_forest", "bg_tavern_interior"}
 CHARACTER_IMAGES = {
     "lira neutral", "lira sad", "lira angry", "lira smile",
     "kael neutral", "kael serious", "kael tired",
 }
-ALLOWED_ROOT_KEYS = {"schema_version", "scene_id", "name", "metadata", "characters", "dialogue"}
+ALLOWED_ROOT_KEYS = {"schema_version", "scene_id", "name", "metadata", "ui", "characters", "dialogue"}
+ALLOWED_UI_KEYS = {"theme_id", "palette_id", "font_pack_id"}
 ALLOWED_ACTION_TYPES = {"line", "scene", "show", "animate", "transition", "pause", "jump", "return"}
+CHARACTER_SLOTS = {"far_left", "left", "center", "right", "far_right"}
 MAX_DIALOGUE_ACTIONS = 500
 MAX_CHARACTERS = 64
 MAX_IDENTIFIER_LENGTH = 256
+MAX_UI_IDENTIFIER_LENGTH = 64
 MAX_TEXT_LENGTH = 4000
 MAX_GENERIC_STRING_LENGTH = 4096
 MAX_SCENE_DEPTH = 20
@@ -21,6 +25,7 @@ MAX_SCENE_RAW_BYTES = 1024 * 1024
 PRODUCTION_JUMP_LABELS = {"next_scene"}
 JSON_INDENT = 2
 JSON_SEPARATORS = (",", ": ")
+UI_IDENTIFIER_PATTERN = re.compile(r"^[a-z][a-z0-9]*(?:[_-][a-z0-9]+)*$")
 
 
 class SceneContractError(ValueError):
@@ -77,6 +82,20 @@ def _validate_identifier(value, path):
         _fail(f"{path} must be a non-empty string up to {MAX_IDENTIFIER_LENGTH} characters")
 
 
+def _validate_ui(ui):
+    _require_keys(ui, set(), ALLOWED_UI_KEYS, "scene.ui")
+    for key, value in ui.items():
+        if (
+            not isinstance(value, str)
+            or len(value) > MAX_UI_IDENTIFIER_LENGTH
+            or UI_IDENTIFIER_PATTERN.fullmatch(value) is None
+        ):
+            _fail(
+                f"scene.ui.{key} must be a lowercase identifier up to "
+                f"{MAX_UI_IDENTIFIER_LENGTH} characters"
+            )
+
+
 def _validate_resource_target(value, path, resources, message):
     _validate_identifier(value, path)
     if value not in resources:
@@ -84,7 +103,13 @@ def _validate_resource_target(value, path, resources, message):
 
 
 def _validate_transform(transform, path):
-    _require_keys(transform, set(), {"xalign", "yalign", "alpha", "flip"}, path)
+    _require_keys(transform, set(), {"slot", "xalign", "yalign", "alpha", "flip"}, path)
+    if "slot" in transform and "xalign" in transform:
+        _fail(f"{path}.slot and {path}.xalign are mutually exclusive")
+    if "slot" in transform and (
+        not isinstance(transform["slot"], str) or transform["slot"] not in CHARACTER_SLOTS
+    ):
+        _fail(f"{path}.slot must be a supported character slot")
     for key in ("xalign", "yalign", "alpha"):
         if key in transform and not _is_number(transform[key]):
             _fail(f"{path}.{key} must be finite numeric")
@@ -171,6 +196,8 @@ def validate_scene_v1(scene):
         _fail("scene.name must be a string")
     if "metadata" in scene and not isinstance(scene["metadata"], dict):
         _fail("scene.metadata must be an object")
+    if "ui" in scene:
+        _validate_ui(scene["ui"])
     characters = scene["characters"]
     if not isinstance(characters, dict) or len(characters) > MAX_CHARACTERS:
         _fail(f"scene.characters must contain at most {MAX_CHARACTERS} entries")
